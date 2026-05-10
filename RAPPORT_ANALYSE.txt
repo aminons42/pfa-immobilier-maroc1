@@ -1,0 +1,92 @@
+
+╔══════════════════════════════════════════════════════════════════════╗
+║                  RAPPORT D'ANALYSE IMMOBILIÈRE                      ║
+║                      Projet PFA - 2026                              ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+1. DONNÉES COLLECTÉES
+   ├─ Total d'annonces : 36,940
+   ├─ Période : 2023-01-01 à 2026-05-02
+   ├─ Villes analysées : 5
+   ├─ Nombre de quartiers : 69
+   └─ Types de biens : Villas et Riads, Villa-Riad, Maisons, Local, Appartements, Bureaux, Autre Immobilier, Terrains et fermes
+
+2. NETTOYAGE ET PRÉPARATION
+   ├─ Méthode outliers : IQR (Interquartile Range)
+   ├─ Minimum données par quartier : 20 annonces
+   ├─ Données manquantes supprimées : ✅
+   └─ Feature engineering : Prix/m², Mois, Année, Saison
+
+3. ANALYSE DESCRIPTIVE
+   ├─ Prix moyen : 3434388 DH
+   ├─ Prix au m² moyen : 13079.91 DH/m²
+   ├─ Surface moyenne : 407.78 m²
+   └─ Écart-type prix : 2193102 DH
+
+4. QUARTIERS REPRÉSENTATIFS
+   ├─ Quartier le plus actif : Toute la ville
+   ├─ Nombre annonces : 1125
+   └─ Prix moyen : 2893339 DH
+
+5. ANALYSE DE SAISONNALITÉ
+   ├─ Variations mensuelles : ÉTUDIÉES (voir graphiques)
+   ├─ Variations annuelles : ÉTUDIÉES (voir graphiques)
+   └─ Tendances saisonnières : À CONSULTER DANS GRAPHIQUES
+
+6. GROUPEMENT DES TYPES
+   └─ 8 types d'immobilier groupés en 3 catégories
+
+7. MODÉLISATION ET PERFORMANCE
+   ├─ Meilleur modèle : XGBoost
+   ├─ Score R² : 0.415 (41.5% variance expliquée)
+   ├─ Erreur moyenne (MAE) : 1387154.88 DH
+   └─ Erreur RMSE : 1679205.92 DH
+
+8. COMPARAISON DES VILLES
+   ├─ Test ANOVA : P-Value = 0.0035 < 0.05 ✅
+   └─ Conclusion : Différences STATISTIQUEMENT SIGNIFICATIVES
+
+9. STANDARDISATION DES PRIX
+   ├─ Méthode : StandardScaler (moyenne 0, écart-type 1)
+   ├─ Bénéfices : Améliore convergence des modèles
+   └─ Appliquée à : Train/Test split séparément
+
+10. PROCHAINES ÉTAPES
+    ├─ Affiner le modèle XGBoost
+    ├─ Analyser les résidus pour anomalies
+    ├─ Prédictions futures (voir tendances)
+    └─ Déploiement possible du meilleur modèle
+
+
+=== RESULTATS DETAILLES DES MODELES ===
+                            MAE          RMSE        R2
+Modèle                                                 
+Linear Regression  1.394187e+06  1.682436e+06  0.413113
+Random Forest      1.473944e+06  1.831807e+06  0.304277
+XGBoost            1.387155e+06  1.679206e+06  0.415364
+
+=== STATISTIQUES PAR QUARTIER ===
+                        Nombre  Prix_Moyen  ...    Std_Prix  Prix_m2_Moyen
+Quartier                                    ...                           
+Toute la ville            1125  2893339.01  ...  2305741.09       11528.28
+Autre secteur             1067  2959121.79  ...  2136875.22       12238.41
+Centre ville               837  3450895.11  ...  2154576.73       13147.94
+Sidi Moumen                833  3490335.05  ...  2157457.06       13030.66
+Maarif                     832  3520038.91  ...  2248770.72       13660.92
+Periferie                  830  3528724.56  ...  2164482.53       12994.98
+Agdal                      829  3561417.46  ...  2156136.41       13681.55
+Zaouia Sidi Kacem          828  3592500.84  ...  2238948.22       13602.27
+Quartier Touristique       821  3494016.85  ...  2119034.61       13257.96
+Quartier Administratif     821  3663403.49  ...  2294963.27       13752.53
+Hay Riad                   819  3532194.76  ...  2142585.33       14286.86
+Guliz                      813  3561811.28  ...  2202244.46       13971.73
+Targa                      812  3560690.31  ...  2170157.38       12776.54
+Hay Moulay Rachid          811  3459846.91  ...  2116339.93       13016.59
+Kasbah                     807  3399471.51  ...  2151227.83       12222.09
+Jamaa El Fna               806  3367311.31  ...  2121556.11       13068.79
+Extension                  804  3445821.20  ...  2233259.47       12994.10
+Hay Hassani                798  3425545.60  ...  2164414.66       13470.15
+Faubourg                   796  3342158.04  ...  2065365.99       12834.89
+Skhira                     796  3637875.71  ...  2319003.65       12996.49
+
+[20 rows x 6 columns]

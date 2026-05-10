@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IMMO MAROC | Comparer</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">🏠 IMMO MAROC</div>
+    <div class="nav-links">
+      <a href="index.html">Carte</a>
+      <a href="estimator.html">Estimation</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a class="active" href="compare.html">Comparer</a>
+    </div>
+  </nav>
+
+  <div class="container grid" style="gap:20px;">
+    <div class="card grid grid-3" style="align-items:end;">
+      <div>
+        <label>Ville 1</label>
+        <select id="cityA"></select>
+      </div>
+      <div>
+        <label>Ville 2</label>
+        <select id="cityB"></select>
+      </div>
+      <div>
+        <label>Type de bien</label>
+        <select id="typeFilter">
+          <option value="">Tous</option>
+          <option>Appartements</option>
+          <option>Maisons</option>
+          <option>Villas et Riads</option>
+          <option>Villa-Riad</option>
+          <option>Bureaux</option>
+          <option>Local</option>
+          <option>Terrains et fermes</option>
+          <option>Autre Immobilier</option>
+        </select>
+      </div>
+      <button class="btn" id="compareBtn">Comparer</button>
+    </div>
+
+    <div class="card" id="compareTable"></div>
+
+    <div class="card">
+      <canvas id="compareTrend" height="240"></canvas>
+    </div>
+
+    <div class="card" id="verdictCard"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script type="module" src="js/compare.js"></script>
+</body>
+</html>

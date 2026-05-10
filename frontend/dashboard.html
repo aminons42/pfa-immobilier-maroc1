@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IMMO MAROC | Dashboard</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">🏠 IMMO MAROC</div>
+    <div class="nav-links">
+      <a href="index.html">Carte</a>
+      <a href="estimator.html">Estimation</a>
+      <a class="active" href="dashboard.html">Dashboard</a>
+      <a href="compare.html">Comparer</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="pill-group" id="cityPills"></div>
+
+    <div class="grid grid-3" id="statsGrid" style="margin-top:20px;"></div>
+
+    <div class="grid grid-2" style="margin-top:20px;">
+      <div class="card chart-card"><canvas id="typeChart" height="220"></canvas></div>
+      <div class="card chart-card"><canvas id="quartierChart" height="220"></canvas></div>
+      <div class="card chart-card"><canvas id="rangeChart" height="220"></canvas></div>
+      <div class="card chart-card"><canvas id="trendChart" height="220"></canvas></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script type="module" src="js/dashboard.js"></script>
+</body>
+</html>

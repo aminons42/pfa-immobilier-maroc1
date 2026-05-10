@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IMMO MAROC | Estimation</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">🏠 IMMO MAROC</div>
+    <div class="nav-links">
+      <a href="index.html">Carte</a>
+      <a class="active" href="estimator.html">Estimation</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="compare.html">Comparer</a>
+    </div>
+  </nav>
+
+  <div class="container grid grid-2">
+    <div class="card">
+      <div class="progress">
+        <div class="progress-step active">1. Localisation</div>
+        <div class="progress-step">2. Caractéristiques</div>
+      </div>
+      <form id="estimatorForm" class="grid" style="gap:16px;">
+        <div>
+          <label>Ville</label>
+          <select id="ville" required></select>
+        </div>
+        <div>
+          <label>Quartier</label>
+          <select id="quartier" required></select>
+        </div>
+        <div>
+          <label>Type de bien</label>
+          <select id="typeBien" required>
+            <option>Appartements</option>
+            <option>Maisons</option>
+            <option>Villas et Riads</option>
+            <option>Villa-Riad</option>
+            <option>Bureaux</option>
+            <option>Local</option>
+            <option>Terrains et fermes</option>
+            <option>Autre Immobilier</option>
+          </select>
+        </div>
+        <div>
+          <label>Surface (m²)</label>
+          <input id="surface" type="number" min="10" required />
+        </div>
+        <div>
+          <label>Nb chambres</label>
+          <input id="chambres" type="number" min="0" required />
+        </div>
+        <div>
+          <label>Nb salles de bain</label>
+          <input id="sdb" type="number" min="0" required />
+        </div>
+        <div>
+          <label>État du bien</label>
+          <select id="etat" required>
+            <option>Neuf</option>
+            <option>Bon état</option>
+            <option>À rénover</option>
+          </select>
+        </div>
+        <div>
+          <label>Étage</label>
+          <input id="etage" type="number" min="0" required />
+        </div>
+        <button class="btn" type="submit">Estimer</button>
+      </form>
+    </div>
+
+    <div class="card" id="resultsCard">
+      <div id="resultsContent">
+        <p>Remplissez le formulaire pour obtenir une estimation.</p>
+      </div>
+      <div id="trendSection" style="display:none;margin-top:20px;">
+        <h3>Tendance des prix</h3>
+        <canvas id="trendChart" height="220"></canvas>
+        <div id="trendMeta" style="margin-top:12px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script type="module" src="js/estimator.js"></script>
+</body>
+</html>

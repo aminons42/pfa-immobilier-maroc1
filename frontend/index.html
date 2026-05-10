@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IMMO MAROC | Carte</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">🏠 IMMO MAROC</div>
+    <div class="nav-links">
+      <a class="active" href="index.html">Carte</a>
+      <a href="estimator.html">Estimation</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="compare.html">Comparer</a>
+    </div>
+  </nav>
+
+  <div class="map-wrapper">
+    <div id="map"></div>
+    <div class="map-legend">
+      ● &lt; 10 000 DH/m²<br />
+      ● 10–13 000 DH/m²<br />
+      ● &gt; 13 000 DH/m²
+    </div>
+    <div class="info-panel" id="infoPanel">
+      <h2 id="panelTitle">Sélectionnez une ville</h2>
+      <p id="panelMeta" class="muted"></p>
+      <div class="info-actions">
+        <button class="btn" id="btnDashboard">Voir Dashboard</button>
+        <button class="btn btn-outline" id="btnEstimator">Estimer mon bien</button>
+        <button class="btn btn-outline" id="btnCompare">Comparer</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="js/map.js"></script>
+</body>
+</html>
