@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.pkl
+*.db
+avito_data_enriched.csv
+backend/models_saved/*.pkl
+backend/database/immo_maroc.db
