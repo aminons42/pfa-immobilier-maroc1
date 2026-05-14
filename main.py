@@ -96,6 +96,15 @@ df = df[df['Date'] >= '2022-01-01']
 df['Prix'] = pd.to_numeric(df['Prix'], errors='coerce')
 df['Surface'] = pd.to_numeric(df['Surface'], errors='coerce')
 df = df.dropna(subset=['Prix', 'Surface', 'Ville', 'Quartier', 'Type'])
+quartiers_a_supprimer = [
+    'Toute la ville',
+    'Autre secteur',
+    'Periferie'
+]
+
+df = df[
+    ~df['Quartier'].isin(quartiers_a_supprimer)
+]
 
 # IMPORTANT : Supprimer les données aberrantes AVANT les outliers
 # Supprimer les prix et surfaces impossibles
@@ -125,9 +134,16 @@ df = df[df['Quartier'].isin(counts[counts >= threshold].index)]
 
 # Création de variables (Feature Engineering)
 df['Prix_m2'] = df['Prix'] / df['Surface']
-# Remplacer les inf et NaN par la médiane
+
+# Remplacer les valeurs infinies par NaN
 df['Prix_m2'] = df['Prix_m2'].replace([np.inf, -np.inf], np.nan)
-df['Prix_m2'].fillna(df['Prix_m2'].median(), inplace=True)
+
+# Suppression des valeurs extrêmes (outliers)
+q99 = df['Prix_m2'].quantile(0.99)
+df = df[df['Prix_m2'] <= q99]
+
+# Remplacement des valeurs manquantes
+df['Prix_m2'] = df['Prix_m2'].fillna(df['Prix_m2'].median())
 
 df['Mois'] = df['Date'].dt.month
 df['Annee'] = df['Date'].dt.year
@@ -168,10 +184,21 @@ sauvegarder_graphique('02_repartition_types_par_ville')
 # ==========================================
 
 # Encodage des variables catégorielles (One-Hot)
-df_model = pd.get_dummies(df[['Surface', 'Ville', 'Type', 'Saison', 'Prix']], drop_first=True)
-
+df_model = pd.get_dummies(
+    df[
+        [
+            'Surface',
+            'Ville',
+            'Quartier',
+            'Type',
+            'Saison',
+            'Prix'
+        ]
+    ],
+    drop_first=True
+)
 X = df_model.drop('Prix', axis=1)
-y = df_model['Prix']
+y = np.log1p(df_model['Prix'])
 
 # Split Train/Test
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -185,7 +212,14 @@ X_test_scaled = scaler.transform(X_test)
 models = {
     "Linear Regression": LinearRegression(),
     "Random Forest": RandomForestRegressor(n_estimators=100, random_state=42),
-    "XGBoost": XGBRegressor(n_estimators=100, learning_rate=0.1, random_state=42)
+    "XGBoost": XGBRegressor(
+    n_estimators=500,
+    learning_rate=0.03,
+    max_depth=7,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    random_state=42
+)
 }
 
 results = []
@@ -193,12 +227,31 @@ results = []
 print(f"\n--- ÉVALUATION DES MODÈLES ---")
 for name, model in models.items():
     model.fit(X_train_scaled, y_train)
-    preds = model.predict(X_test_scaled)
-    
-    mae = mean_absolute_error(y_test, preds)
-    rmse = np.sqrt(mean_squared_error(y_test, preds))
-    r2 = r2_score(y_test, preds)
-    
+    preds_log = model.predict(X_test_scaled)
+
+# Protection overflow
+    preds_log = np.clip(preds_log, 0, 20)
+
+    preds = np.expm1(preds_log)
+
+    y_test_real = np.expm1(y_test)
+
+    mae = mean_absolute_error(
+     y_test_real,
+     preds
+    )
+
+    rmse = np.sqrt(
+      mean_squared_error(
+        y_test_real,
+        preds
+             )
+    )
+
+    r2 = r2_score(
+       y_test_real,
+       preds
+    )
     results.append({"Modèle": name, "MAE": mae, "RMSE": rmse, "R2": r2})
     print(f"{name} -> R2: {r2:.3f} | RMSE: {rmse:.2f} DH")
 
