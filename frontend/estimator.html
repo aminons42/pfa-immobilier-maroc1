@@ -3,84 +3,81 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IMMO MAROC | Estimation</title>
+  <title>IMMO MAROC | Estimation IA</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="css/main.css" />
 </head>
-<body>
-  <nav class="navbar">
-    <div class="nav-brand">🏠 IMMO MAROC</div>
-    <div class="nav-links">
-      <a href="index.html">Carte</a>
-      <a class="active" href="estimator.html">Estimation</a>
-      <a href="dashboard.html">Dashboard</a>
-      <a href="compare.html">Comparer</a>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+  
+  <nav class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm sticky top-0 z-50">
+    <div class="font-bold text-xl text-indigo-600 flex items-center gap-2">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+      IA ESTIMATOR
+    </div>
+    <div class="flex gap-6 font-medium text-sm text-slate-500">
+      <a class="hover:text-indigo-600 transition" href="index.html">Carte</a>
+      <a class="text-indigo-600" href="estimator.html">Estimer</a>
+      <a class="hover:text-indigo-600 transition" href="dashboard.html">Marché</a>
+      <a class="hover:text-indigo-600 transition" href="compare.html">Comparer</a>
     </div>
   </nav>
 
-  <div class="container grid grid-2">
-    <div class="card">
-      <div class="progress">
-        <div class="progress-step active">1. Localisation</div>
-        <div class="progress-step">2. Caractéristiques</div>
+  <div class="max-w-6xl mx-auto px-6 py-10 grid lg:grid-cols-12 gap-10">
+    
+    <div class="lg:col-span-7 bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+      <div class="mb-8">
+        <h1 class="text-2xl font-bold text-slate-900">Estimez la valeur de votre bien</h1>
+        <p class="text-slate-500 text-sm mt-1">Notre modele ML analyse des milliers de donnees pour vous donner le prix juste.</p>
       </div>
-      <form id="estimatorForm" class="grid" style="gap:16px;">
-        <div>
-          <label>Ville</label>
-          <select id="ville" required></select>
+
+      <form id="estimatorForm" class="grid grid-cols-2 gap-6">
+        <div class="col-span-2 sm:col-span-1">
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Ville</label>
+          <select id="ville" required class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"></select>
         </div>
-        <div>
-          <label>Quartier</label>
-          <select id="quartier" required></select>
+        <div class="col-span-2 sm:col-span-1">
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Quartier</label>
+          <select id="quartier" required class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"></select>
         </div>
-        <div>
-          <label>Type de bien</label>
-          <select id="typeBien" required>
-            <option>Appartements</option>
-            <option>Maisons</option>
-            <option>Villas et Riads</option>
-            <option>Villa-Riad</option>
-            <option>Bureaux</option>
-            <option>Local</option>
-            <option>Terrains et fermes</option>
-            <option>Autre Immobilier</option>
+        
+        <div class="col-span-2">
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Type de bien</label>
+          <select id="typeBien" required class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+            <option value="Appartements">Appartements</option>
+            <option value="Maisons">Maisons</option>
+            <option value="Villas et Riads">Villas et Riads</option>
           </select>
         </div>
-        <div>
-          <label>Surface (m²)</label>
-          <input id="surface" type="number" min="10" required />
+
+        <div class="col-span-2 sm:col-span-1">
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Surface (m²)</label>
+          <input id="surface" type="number" min="15" max="500" value="60" required class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" />
         </div>
-        <div>
-          <label>Nb chambres</label>
-          <input id="chambres" type="number" min="0" required />
+        <div class="col-span-2 sm:col-span-1">
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Chambres</label>
+          <input id="chambres" type="number" min="1" value="2" required class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none transition" />
         </div>
-        <div>
-          <label>Nb salles de bain</label>
-          <input id="sdb" type="number" min="0" required />
+        <div class="col-span-2 sm:col-span-1">
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Salles de bain</label>
+          <input id="sdb" type="number" min="1" value="1" required class="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none transition" />
         </div>
-        <div>
-          <label>État du bien</label>
-          <select id="etat" required>
-            <option>Neuf</option>
-            <option>Bon état</option>
-            <option>À rénover</option>
-          </select>
+
+        <input id="etage" type="hidden" value="1" />
+
+        <div class="col-span-2 mt-4">
+          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-lg py-4 rounded-xl shadow-md shadow-indigo-200 transition transform hover:-translate-y-0.5">
+            Lancer l'algorithme
+          </button>
         </div>
-        <div>
-          <label>Étage</label>
-          <input id="etage" type="number" min="0" required />
-        </div>
-        <button class="btn" type="submit">Estimer</button>
       </form>
     </div>
 
-    <div class="card" id="resultsCard">
-      <div id="resultsContent">
-        <p>Remplissez le formulaire pour obtenir une estimation.</p>
-      </div>
-      <div id="trendSection" style="display:none;margin-top:20px;">
-        <h3>Tendance des prix</h3>
-        <canvas id="trendChart" height="220"></canvas>
-        <div id="trendMeta" style="margin-top:12px;"></div>
+    <div class="lg:col-span-5 relative">
+      <div class="sticky top-24 bg-white p-8 rounded-3xl shadow-lg shadow-slate-200/50 border border-indigo-50" id="resultsCard">
+        <div id="resultsContent" class="text-center text-slate-400 py-12">
+          <svg class="w-16 h-16 mx-auto mb-4 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v1a3 3 0 106 0v-1m-5 0h4a2 2 0 002-2v-2H8v2a2 2 0 002 2zM12 3c-3.866 0-7 3.134-7 7 0 2.229 1.05 4.218 2.684 5.5.39.308.648.788.68 1.288h7.272c.032-.5.29-.98.68-1.288C17.95 14.218 19 12.229 19 10c0-3.866-3.134-7-7-7z"></path></svg>
+          <p class="font-medium">En attente de vos critères...</p>
+        </div>
       </div>
     </div>
   </div>

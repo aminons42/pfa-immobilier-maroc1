@@ -1,0 +1,38 @@
+RAPPORT OFFICIEL PFA — INTELLIGENCE ARTIFICIELLE IMMOBILIÈRE
+=======================================================================
+
+1. AUDIT DES DONNÉES
+   - Source             : Avito Maroc (données réelles scrapées)
+   - Volume initial     : 40 834 annonces
+   - Volume après IQR   : 21,594 annonces
+   - Villes couvertes   : 30 villes marocaines
+   - Période            : Juin 2023 → Mai 2026
+   - Nettoyage          : IQR groupé par Type de bien
+   - Colonne Etat       : supprimée (100% vide sur les données réelles)
+
+2. INGÉNIERIE DES CARACTÉRISTIQUES
+   - Encodage spatial   : Target Encoding (moyennes calculées sur train set uniquement)
+   - Transformation target : log1p(Prix) → expm1(prédiction) pour rétablir les DH
+   - Standardisation    : StandardScaler (μ=0, σ=1)
+   - Valeurs manquantes : imputation par médiane par type de bien
+   - Features finales   : 11 colonnes
+
+3. TEST STATISTIQUE
+   - ANOVA Villes       : F-Stat = 11.86 | P-Value = 0.0000
+   - Interprétation     : Différence significative entre villes (p<0.05)
+
+4. BENCHMARK DES ALGORITHMES ML
+  - RandomForest    | R²: 0.666 | MAE: 538,075 DH | Erreur médiane: 23.9% | <10%: 23%  <20%: 43%  <30%: 60%
+  - XGBoost         | R²: 0.674 | MAE: 520,645 DH | Erreur médiane: 22.5% | <10%: 24%  <20%: 46%  <30%: 62%
+  - LightGBM        | R²: 0.667 | MAE: 523,503 DH | Erreur médiane: 22.4% | <10%: 24%  <20%: 46%  <30%: 61%
+
+5. MODÈLE RETENU POUR PRODUCTION
+   - Algorithme         : XGBoost
+   - R² test set        : 0.674
+   - MAE                : 520,645 DH
+   - Amélioration vs données synthétiques : R² 0.459 → 0.674 (+47%)
+
+6. FICHIERS GÉNÉRÉS
+   - 6 artefacts .joblib pour l'API FastAPI
+   - 10 graphiques PNG dans le dossier 'D:\projet_pfa\reports\graphiques/'
+   - Ce rapport : RAPPORT_PFA.txt

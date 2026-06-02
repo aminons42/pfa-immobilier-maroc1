@@ -3,30 +3,44 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IMMO MAROC | Dashboard</title>
+  <title>IMMO MAROC | Dashboard Marché</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="css/main.css" />
 </head>
-<body>
-  <nav class="navbar">
-    <div class="nav-brand">🏠 IMMO MAROC</div>
-    <div class="nav-links">
-      <a href="index.html">Carte</a>
-      <a href="estimator.html">Estimation</a>
-      <a class="active" href="dashboard.html">Dashboard</a>
-      <a href="compare.html">Comparer</a>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+  
+  <nav class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm sticky top-0 z-50">
+    <div class="font-bold text-xl text-indigo-600 flex items-center gap-2">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+      MARKET DASHBOARD
+    </div>
+    <div class="flex gap-6 font-medium text-sm text-slate-500">
+      <a class="hover:text-indigo-600 transition" href="index.html">Carte</a>
+      <a class="hover:text-indigo-600 transition" href="estimator.html">Estimer</a>
+      <a class="text-indigo-600" href="dashboard.html">Marché</a>
+      <a class="hover:text-indigo-600 transition" href="compare.html">Comparer</a>
     </div>
   </nav>
 
-  <div class="container">
-    <div class="pill-group" id="cityPills"></div>
+  <div class="max-w-7xl mx-auto px-6 py-10">
+    <div class="flex gap-3 overflow-x-auto pb-4 mb-6 scrollbar-hide" id="cityPills">
+      </div>
 
-    <div class="grid grid-3" id="statsGrid" style="margin-top:20px;"></div>
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8" id="statsGrid">
+      </div>
 
-    <div class="grid grid-2" style="margin-top:20px;">
-      <div class="card chart-card"><canvas id="typeChart" height="220"></canvas></div>
-      <div class="card chart-card"><canvas id="quartierChart" height="220"></canvas></div>
-      <div class="card chart-card"><canvas id="rangeChart" height="220"></canvas></div>
-      <div class="card chart-card"><canvas id="trendChart" height="220"></canvas></div>
+    <div class="grid lg:grid-cols-2 gap-8">
+      <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+        <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wide mb-4">Répartition par Type</h3>
+        <div class="h-64"><canvas id="typeChart"></canvas></div>
+      </div>
+      
+      <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+        <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wide mb-4">Top 5 Quartiers (Prix m²)</h3>
+        <div class="h-64"><canvas id="quartierChart"></canvas></div>
+      </div>
+
+      
     </div>
   </div>
 
