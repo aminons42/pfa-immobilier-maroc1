@@ -8,7 +8,59 @@ import pandas as pd
 import numpy as np
 import joblib
 import math
+from typing import Annotated
+from pydantic import  Field
+# ── Ajouter après les imports, avant la définition de l'app ──────────────────
 
+# Taux de croissance annuels estimés par ville (source: HCP + indices Avito/Mubawab 2019-2024)
+# Ces taux sont facilement ajustables sans re-entraîner le modèle
+TAUX_CROISSANCE = {
+    "Casablanca":  0.055,   # +5.5%/an — marché le plus dynamique
+    "Rabat":       0.048,
+    "Marrakech":   0.062,   # Tourisme + investissement étranger
+    "Tanger":      0.071,   # Zone franche — croissance forte
+    "Agadir":      0.045,
+    "Fès":         0.038,
+    "Meknès":      0.032,
+    "Oujda":       0.028,
+    "Kénitra":     0.042,
+    "Tétouan":     0.038,
+    "El Jadida":   0.035,
+    "Essaouira":   0.040,
+    "Mohammedia":  0.048,
+    "Temara":      0.042,
+    "Berrechid":   0.033,
+    "Safi":        0.030,
+    "default":     0.038,   # Taux national moyen
+}
+
+def generate_forecast(prix_base: float, prix_m2_base: float, ville: str, surface: float):
+    """
+    Génère une projection de prix sur 5 ans à partir du prix estimé.
+    Utilise un taux de croissance annuel composé par ville.
+    Retourne 6 points : année 0 (actuel) + années +1 à +5.
+    """
+    from datetime import datetime
+    annee_base = datetime.now().year
+    taux = TAUX_CROISSANCE.get(ville, TAUX_CROISSANCE["default"])
+    
+    forecast = []
+    for n in range(6):  # 0 = maintenant, 1..5 = futures années
+        prix_n = prix_base * ((1 + taux) ** n)
+        forecast.append({
+            "year": annee_base + n,
+            "prix": clean_float(prix_n),
+            "prix_m2": clean_float(prix_n / surface),
+        })
+    
+    variation_5ans = ((forecast[5]["prix"] / prix_base) - 1) * 100
+    
+    return {
+        "points": forecast,
+        "taux_annuel": clean_float(taux * 100),          # ex: 5.5
+        "variation_5ans": clean_float(variation_5ans),   # ex: 30.7
+    }
+    
 def clean_float(x):
     if pd.isna(x) or math.isinf(x): return 0.0
     return float(x)
@@ -73,15 +125,17 @@ def load_assets():
     except Exception as exc:
         raise RuntimeError(f"Erreur de chargement des artefacts ML: {exc}")
 
-class BienImmobilier(BaseModel):
-    ville: constr(min_length=1)
-    quartier: constr(min_length=1)
-    type_bien: Literal["Appartements", "Maisons", "Villas et Riads"]
-    surface: confloat(ge=15, le=500)
-    nb_chambres: conint(ge=0, le=20) = 1
-    nb_salles_bain: conint(ge=0, le=20) = 1
-    etage: conint(ge=0, le=120) = 1
 
+
+class BienImmobilier(BaseModel):
+    ville: Annotated[str, Field(min_length=1)]
+    quartier: Annotated[str, Field(min_length=1)]
+    type_bien: Annotated[str, Field(min_length=1)]
+    surface: Annotated[float, Field(ge=15, le=500)]
+
+    nb_chambres: Annotated[int, Field(ge=0, le=20)] = 1
+    nb_salles_bain: Annotated[int, Field(ge=0, le=20)] = 1
+    etage: Annotated[int, Field(ge=0, le=120)] = 1
 class CompareRequest(BaseModel):
     city_a: str
     city_b: str
@@ -91,29 +145,36 @@ class CompareRequest(BaseModel):
 def predire_prix(bien: BienImmobilier):
     if modele is None or scaler is None:
         raise HTTPException(status_code=503, detail="Modele non charge")
+    
+    # ── Prédiction ML (code existant — ne pas toucher) ──────────────────────
     input_data = pd.DataFrame([{
-        'Surface': bien.surface, 'Type': bien.type_bien, 'Nombre_Chambres': bien.nb_chambres,
+        'Surface': bien.surface, 'Type': bien.type_bien,
+        'Nombre_Chambres': bien.nb_chambres,
         'Salles_de_bain': bien.nb_salles_bain, 'Etage': bien.etage
     }])
-    
     prix_ville = moyennes_villes.get(bien.ville, moyenne_globale)
     prix_quartier = moyennes_quartiers.get(bien.quartier, prix_ville)
     input_data['Ville_Encoded'] = prix_ville
     input_data['Quartier_Encoded'] = prix_quartier
-    
     input_encoded = pd.get_dummies(input_data)
     input_aligned = input_encoded.reindex(columns=colonnes_entrainement, fill_value=0).astype(float)
-    
     input_scaled = scaler.transform(input_aligned)
     prix_log = modele.predict(input_scaled)[0]
     prix_estime = clean_float(max(0.0, np.expm1(prix_log)))
+    prix_m2 = clean_float(prix_estime / bien.surface)
     
-    # ON RETOURNE UNIQUEMENT LE PRIX ET L'INTERVALLE (Basé sur la MAE)
+    # ── Nouvelle section : forecast ─────────────────────────────────────────
+    forecast = generate_forecast(prix_estime, prix_m2, bien.ville, bien.surface)
+    
     return {
-        "estimation": prix_estime,
-        "range_min": prix_estime * 0.85,
-        "range_max": prix_estime * 1.15,
-        "prix_m2_estime": clean_float(prix_estime / bien.surface)
+        "estimation":      prix_estime,
+        "range_min":       prix_estime * 0.85,
+        "range_max":       prix_estime * 1.15,
+        "prix_m2_estime":  prix_m2,
+        # Nouveaux champs :
+        "forecast":        forecast["points"],       # liste de 6 dicts {year, prix, prix_m2}
+        "taux_annuel":     forecast["taux_annuel"],  # ex: 5.5
+        "variation_5ans":  forecast["variation_5ans"] # ex: 30.7
     }
 
 @app.get("/api/cities")
