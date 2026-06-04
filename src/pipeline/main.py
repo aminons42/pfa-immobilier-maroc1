@@ -251,8 +251,31 @@ sauvegarder_graphique('06_evolution_mensuelle_annonces')
 # On supprime Prix_m2, Date et Mois — ils ne doivent PAS être dans les features ML
 # (Prix_m2 créerait une fuite de données car calculé depuis le Prix)
 df = df.drop(columns=['Prix_m2', 'Date', 'Mois', 'Date_Annonce'], errors='ignore')
-# On enlève aussi Titre (texte brut, non utilisé dans ce pipeline)
-df = df.drop(columns=['Titre'], errors='ignore')
+
+# ──────────────────────────────────────────────────────────────────────────────
+# EXTRACTION DES FEATURES NLP — avant de supprimer la colonne Titre
+# On extrait ici car la Section 4 ne verra plus le texte brut.
+# Ces features binaires ne dépendent pas du prix → aucun data leakage.
+# ──────────────────────────────────────────────────────────────────────────────
+_col_titre = next(
+    (c for c in df.columns if c.lower() in ('titre', 'title', 'annonce', 'description')),
+    None
+)
+if _col_titre is not None:
+    titres = df[_col_titre].fillna('').str.lower()
+    df['has_piscine']  = titres.str.contains(r'piscine|pool',                  na=False).astype(int)
+    df['has_standing'] = titres.str.contains(r'standing|luxe|luxury|prestige', na=False).astype(int)
+    df['has_duplex']   = titres.str.contains(r'duplex|penthouse|triplex',       na=False).astype(int)
+    df['has_terrasse'] = titres.str.contains(r'terrasse|jardin',                na=False).astype(int)
+    df['has_centre']   = titres.str.contains(r'centre|hypercentre',             na=False).astype(int)
+    _nb_nlp = sum(df[f].sum() for f in ['has_piscine','has_standing','has_duplex','has_terrasse','has_centre'])
+    print(f"  [NLP] Colonne '{_col_titre}' trouvee -> {_nb_nlp:,} signaux dans les titres.")
+    # Supprime le texte brut maintenant qu'on a extrait ce dont on avait besoin
+    df = df.drop(columns=[_col_titre])
+else:
+    for col in ['has_piscine', 'has_standing', 'has_duplex', 'has_terrasse', 'has_centre']:
+        df[col] = 0
+    print("  [NLP] Aucune colonne texte trouvee -> features NLP a 0.")
 
 
 # ==============================================================================
@@ -315,40 +338,70 @@ for col in colonnes_optionnelles:
 
 
 # ==============================================================================
-# SECTION 4 — INGÉNIERIE DES CARACTÉRISTIQUES (FEATURE ENGINEERING)
+# SECTION 4 — INGÉNIERIE DES CARACTÉRISTIQUES (FEATURE ENGINEERING) — AMÉLIORÉE
 # ==============================================================================
-# Cette section transforme les variables brutes en features exploitables par le ML.
 #
-# PROBLÈME : Ville et Quartier sont du texte (catégoriel haute cardinalité).
-# 156 villes + des centaines de quartiers = trop de colonnes si on fait du One-Hot.
+# AMÉLIORATIONS PAR RAPPORT À LA VERSION PRÉCÉDENTE :
 #
-# SOLUTION : Target Encoding
-# On remplace chaque ville/quartier par le PRIX MOYEN des biens dans cette zone.
-# Ex: "Casablanca" → 2 500 000 DH (prix moyen à Casablanca dans le train set)
-# Cela encode l'information géographique de façon compacte et efficace.
+# [A] TARGET ENCODING AVEC SMOOTHING (lissage bayésien)
+#     Problème de l'ancien encodage : un quartier avec 2 annonces avait une
+#     moyenne très bruitée (ex: 1 villa à 10M DH → moyenne quartier = 10M DH).
+#     Le smoothing corrige ça en pondérant la moyenne du groupe par sa taille :
+#       enc = (n × moy_groupe + α × moy_globale) / (n + α)
+#     Avec n petit → l'encodage se rapproche de la moyenne globale (stable).
+#     Avec n grand → l'encodage reflète vraiment le quartier (fiable).
 #
-# RÈGLE ABSOLUE : on calcule les moyennes UNIQUEMENT sur X_train.
-# Utiliser X_test pour calculer les moyennes = data leakage (triche involontaire).
+# [B] 6 FEATURES GÉOGRAPHIQUES au lieu de 2
+#     On encode maintenant : prix moyen (smoothé), prix au m² moyen (smoothé),
+#     prix médian, et prix au m² médian — pour les villes ET les quartiers.
+#     Le prix au m² est LA métrique standard de l'immobilier marocain.
+#     La médiane est plus robuste que la moyenne aux biens exceptionnels.
 #
-# NOUVEAUTÉ vs ancien main.py : on ajoute log(Prix) comme target.
-# Les prix immobiliers sont log-normaux : quelques villas à 20M DH tirent la moyenne
-# vers le haut. log(Prix) rééquilibre la distribution → meilleur R².
+# [C] 5 FEATURES NLP depuis le titre
+#     Les annonces mentionnant "piscine" coûtent +166% de plus en médiane,
+#     "standing/luxe" +83%, "duplex" +53%, "terrasse" +47%. Ces signaux sont
+#     dans le texte mais jamais utilisés. On les extrait en variables binaires.
+#
+# [D] log(Surface) comme feature explicite
+#     On modélise déjà log(Prix) comme target. La relation log(Prix) ~ log(Surface)
+#     est plus linéaire que Prix ~ Surface, ce qui facilite l'apprentissage.
+#
+# [E] Densité du quartier
+#     Le nombre d'annonces dans un quartier est lui-même un signal (zones actives
+#     vs zones périphériques peu liquides).
+#
+# RÈGLE ABSOLUE (inchangée) : tout est calculé sur X_train uniquement.
+# Appliquer sur X_test avec .map() et .fillna() pour éviter tout data leakage.
 
 print("\n[4/6] Ingénierie des caractéristiques et séparation train/test...")
 
-# Définition des features (variables d'entrée du modèle)
-features_utilisees = ['Surface', 'Ville', 'Quartier', 'Type']
+# Les features NLP (has_piscine, has_standing, etc.) ont déjà été extraites
+# depuis la colonne Titre juste avant la Section 3, avant son suppression du df.
+# Elles sont déjà présentes dans df comme colonnes binaires — rien à refaire ici.
+features_nlp = ['has_piscine', 'has_standing', 'has_duplex', 'has_terrasse', 'has_centre']
+nb_nlp = sum(df[f].sum() for f in features_nlp)
+print(f"  [NLP] {nb_nlp:,} signaux actifs dans les features NLP.")
+
+# ──────────────────────────────────────────────────────────────────────────────
+# [D] log(Surface) — transformation cohérente avec log(Prix) comme target
+# ──────────────────────────────────────────────────────────────────────────────
+df['log_Surface'] = np.log1p(df['Surface'])
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Définition des features finales
+# ──────────────────────────────────────────────────────────────────────────────
+features_utilisees = ['Surface', 'log_Surface', 'Ville', 'Quartier', 'Type'] + features_nlp
 for col in ['Nombre_Chambres', 'Salles_de_bain', 'Etage']:
     if col in df.columns:
         features_utilisees.append(col)
 
-print(f"  Features sélectionnées : {features_utilisees}")
+print(f"  Features sélectionnées ({len(features_utilisees)}) : {features_utilisees}")
 
-X = df[features_utilisees].copy()
-y_brut   = df['Prix']
-y_log    = np.log1p(df['Prix'])   # log(1 + Prix) pour éviter log(0)
+X      = df[features_utilisees].copy()
+y_brut = df['Prix']
+y_log  = np.log1p(df['Prix'])   # log(1 + Prix) pour éviter log(0)
 
-# --- Séparation train / test AVANT tout encodage ---
+# --- Séparation train / test AVANT tout encodage statistique ---
 # test_size=0.2 → 80% entraînement, 20% test
 # random_state=42 → résultat reproductible (la "graine" du hasard est fixée)
 X_train, X_test, y_train_log, y_test_log, y_train_brut, y_test_brut = train_test_split(
@@ -356,25 +409,106 @@ X_train, X_test, y_train_log, y_test_log, y_train_brut, y_test_brut = train_test
 )
 print(f"  Train : {len(X_train):,} annonces | Test : {len(X_test):,} annonces")
 
-# --- Target Encoding (calculé sur le train set uniquement) ---
-train_temp = X_train.copy()
-train_temp['Prix'] = y_train_brut.values   # On attache le prix brut pour calculer les moyennes
+# ──────────────────────────────────────────────────────────────────────────────
+# [A+B] TARGET ENCODING AVEC SMOOTHING — calculé sur X_train uniquement
+# ──────────────────────────────────────────────────────────────────────────────
+# Paramètre α (smoothing_factor) : nombre "fictif" d'annonces équivalant
+# à la moyenne globale. Plus α est grand, plus on lisse vers la globale.
+# Valeur recommandée : 10 à 30 selon la taille du dataset.
+# Ici α=20 car on a ~17 000 annonces train avec ~775 quartiers (moy. 22/quartier).
+SMOOTHING_FACTOR = 20
 
-moyennes_villes     = train_temp.groupby('Ville')['Prix'].mean()
-moyennes_quartiers  = train_temp.groupby('Quartier')['Prix'].mean()
-moyenne_globale     = y_train_brut.mean()  # Valeur de repli si ville/quartier inconnu
+def target_encoding_smoothe(train_df, colonne_groupe, colonne_cible, alpha):
+    """
+    Calcule un Target Encoding lissé (smoothed) pour une colonne catégorielle.
 
-# Application sur train
-X_train['Ville_Encoded']    = X_train['Ville'].map(moyennes_villes)
-X_train['Quartier_Encoded'] = X_train['Quartier'].map(moyennes_quartiers)
+    Formule :
+        enc(g) = (n_g × moy_g + α × moy_globale) / (n_g + α)
 
-# Application sur test (avec fallback sur la moyenne globale pour les nouvelles zones)
-X_test['Ville_Encoded']    = X_test['Ville'].map(moyennes_villes).fillna(moyenne_globale)
-X_test['Quartier_Encoded'] = X_test['Quartier'].map(moyennes_quartiers).fillna(moyenne_globale)
+    Avec :
+        n_g        = nombre d'annonces dans le groupe g
+        moy_g      = moyenne de la cible dans le groupe g
+        moy_globale = moyenne globale de la cible (fallback)
+        α          = facteur de lissage (smoothing_factor)
 
-# Suppression des colonnes texte Ville/Quartier (remplacées par leurs encodages numériques)
-X_train = X_train.drop(['Ville', 'Quartier'], axis=1)
-X_test  = X_test.drop(['Ville', 'Quartier'], axis=1)
+    Retourne un dict {valeur_groupe → encodage_lissé}.
+    """
+    stats_groupe = train_df.groupby(colonne_groupe)[colonne_cible].agg(['mean', 'count'])
+    moy_globale  = train_df[colonne_cible].mean()
+
+    stats_groupe['enc_smoothe'] = (
+        (stats_groupe['count'] * stats_groupe['mean'] + alpha * moy_globale)
+        / (stats_groupe['count'] + alpha)
+    )
+    return stats_groupe['enc_smoothe'], moy_globale
+
+
+# On attache le prix brut et le prix/m² au train set temporaire pour les calculs
+train_temp             = X_train.copy()
+train_temp['Prix']     = y_train_brut.values
+train_temp['Prix_m2']  = y_train_brut.values / train_temp['Surface'].replace(0, np.nan)
+
+# ── Encodages pour VILLE (4 features) ─────────────────────────────────────────
+enc_ville_prix,    moy_globale_prix    = target_encoding_smoothe(train_temp, 'Ville', 'Prix',   SMOOTHING_FACTOR)
+enc_ville_prixm2,  moy_globale_prixm2  = target_encoding_smoothe(train_temp, 'Ville', 'Prix_m2', SMOOTHING_FACTOR)
+enc_ville_median   = train_temp.groupby('Ville')['Prix'].median()
+enc_ville_med_m2   = train_temp.groupby('Ville')['Prix_m2'].median()
+
+# ── Encodages pour QUARTIER (4 features) ──────────────────────────────────────
+enc_qrt_prix,     _  = target_encoding_smoothe(train_temp, 'Quartier', 'Prix',   SMOOTHING_FACTOR)
+enc_qrt_prixm2,   _  = target_encoding_smoothe(train_temp, 'Quartier', 'Prix_m2', SMOOTHING_FACTOR)
+enc_qrt_median       = train_temp.groupby('Quartier')['Prix'].median()
+enc_qrt_med_m2       = train_temp.groupby('Quartier')['Prix_m2'].median()
+
+# ── Densité du quartier (nombre d'annonces dans le train) ─────────────────────
+# Normalisée par le max pour rester dans [0, 1]
+densite_quartier_raw = train_temp['Quartier'].value_counts()
+densite_max          = densite_quartier_raw.max()
+enc_qrt_densite      = densite_quartier_raw / densite_max  # → [0, 1]
+
+moyenne_globale = moy_globale_prix   # artefact de fallback pour l'API (inchangé)
+
+# ── Moyennes de fallback pour les groupes inconnus au moment du test ───────────
+fallback_ville_prixm2 = enc_ville_prixm2.mean()
+fallback_ville_median = enc_ville_median.median()
+fallback_ville_med_m2 = enc_ville_med_m2.median()
+fallback_qrt_prixm2   = enc_qrt_prixm2.mean()
+fallback_qrt_median   = enc_qrt_median.median()
+fallback_qrt_med_m2   = enc_qrt_med_m2.median()
+fallback_qrt_densite  = enc_qrt_densite.mean()
+
+def appliquer_encodages(X_split, is_train=False):
+    """
+    Applique les 9 encodages géographiques à un split (train ou test).
+    Pour le test, les groupes inconnus sont remplacés par le fallback.
+    Retourne le split avec les nouvelles colonnes, sans 'Ville' ni 'Quartier'.
+    """
+    X = X_split.copy()
+
+    # Villes
+    X['Ville_prix_smoothe']  = X['Ville'].map(enc_ville_prix).fillna(moyenne_globale)
+    X['Ville_prixm2_smoothe']= X['Ville'].map(enc_ville_prixm2).fillna(fallback_ville_prixm2)
+    X['Ville_prix_median']   = X['Ville'].map(enc_ville_median).fillna(fallback_ville_median)
+    X['Ville_prixm2_median'] = X['Ville'].map(enc_ville_med_m2).fillna(fallback_ville_med_m2)
+
+    # Quartiers
+    X['Qrt_prix_smoothe']    = X['Quartier'].map(enc_qrt_prix).fillna(moyenne_globale)
+    X['Qrt_prixm2_smoothe']  = X['Quartier'].map(enc_qrt_prixm2).fillna(fallback_qrt_prixm2)
+    X['Qrt_prix_median']     = X['Quartier'].map(enc_qrt_median).fillna(fallback_qrt_median)
+    X['Qrt_prixm2_median']   = X['Quartier'].map(enc_qrt_med_m2).fillna(fallback_qrt_med_m2)
+    X['Qrt_densite']         = X['Quartier'].map(enc_qrt_densite).fillna(fallback_qrt_densite)
+
+    return X.drop(['Ville', 'Quartier'], axis=1)
+
+X_train = appliquer_encodages(X_train, is_train=True)
+X_test  = appliquer_encodages(X_test,  is_train=False)
+
+nouvelles_features_geo = [
+    'Ville_prix_smoothe', 'Ville_prixm2_smoothe', 'Ville_prix_median', 'Ville_prixm2_median',
+    'Qrt_prix_smoothe',   'Qrt_prixm2_smoothe',   'Qrt_prix_median',   'Qrt_prixm2_median',
+    'Qrt_densite'
+]
+print(f"  [ENCODING] {len(nouvelles_features_geo)} features géographiques générées (α={SMOOTHING_FACTOR})")
 
 # --- One-Hot Encoding sur la colonne Type ---
 # Type est catégoriel FAIBLE cardinalité (6 types) → One-Hot fonctionne bien ici.
@@ -395,7 +529,8 @@ X_train_scaled = scaler.fit_transform(X_train_enc)
 X_test_scaled  = scaler.transform(X_test_enc)
 
 colonnes_finales = list(X_train_enc.columns)
-print(f"  Nombre de features après encodage : {len(colonnes_finales)}")
+print(f"  Nombre de features après encodage : {len(colonnes_finales)} "
+      f"(était 11 → +{len(colonnes_finales) - 11} nouvelles features)")
 
 
 # ==============================================================================
@@ -557,13 +692,28 @@ if hasattr(meilleur_modele, 'feature_importances_'):
 # L'API FastAPI (api.py) chargera ces fichiers .joblib au démarrage pour faire
 # des prédictions sans avoir besoin de réentraîner le modèle.
 #
-# Les artefacts à sauvegarder :
-#   - modele_champion.joblib    : le modèle entraîné (LightGBM)
-#   - scaler.joblib             : le StandardScaler (transform des features)
-#   - encodeur_villes.joblib    : dictionnaire Ville → Prix moyen
-#   - encodeur_quartiers.joblib : dictionnaire Quartier → Prix moyen
-#   - colonnes_entrainement.joblib : liste des colonnes dans le bon ordre
-#   - moyenne_globale.joblib    : fallback si ville/quartier inconnu
+# ARTEFACTS SAUVEGARDÉS (version améliorée) :
+#
+#   Modèle & preprocessing :
+#   ├── modele_champion.joblib        : modèle entraîné (LightGBM/XGBoost/RF)
+#   ├── scaler.joblib                 : StandardScaler fit sur X_train
+#   └── colonnes_entrainement.joblib  : liste ordonnée des features
+#
+#   Encodages géographiques (villes) — 4 features :
+#   ├── enc_ville_prix_smoothe.joblib   : prix moyen lissé (α=20)
+#   ├── enc_ville_prixm2_smoothe.joblib : prix/m² moyen lissé
+#   ├── enc_ville_prix_median.joblib    : prix médian brut
+#   └── enc_ville_prixm2_median.joblib  : prix/m² médian
+#
+#   Encodages géographiques (quartiers) — 5 features :
+#   ├── enc_qrt_prix_smoothe.joblib     : prix moyen lissé
+#   ├── enc_qrt_prixm2_smoothe.joblib   : prix/m² moyen lissé
+#   ├── enc_qrt_prix_median.joblib      : prix médian brut
+#   ├── enc_qrt_prixm2_median.joblib    : prix/m² médian
+#   └── enc_qrt_densite.joblib          : densité normalisée du quartier
+#
+#   Fallbacks (valeurs de remplacement si zone inconnue à la prédiction) :
+#   └── encoding_fallbacks.joblib       : dict de toutes les valeurs par défaut
 #
 # NOTE : on sauvegarde le modèle avec joblib (compatible sklearn).
 #        Pour XGBoost natif, on utiliserait model.save_model("model.ubj"),
@@ -574,20 +724,55 @@ print("\n[6/6] Sauvegarde des artefacts pour l'API FastAPI...")
 MODELS_DIR = PROJECT_ROOT / "models"
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
+# Dictionnaire des fallbacks : l'API l'utilisera quand une ville/quartier
+# n'est pas dans les encodeurs (nouvelle zone ou faute de frappe).
+encoding_fallbacks = {
+    'moyenne_globale'      : moyenne_globale,
+    'ville_prixm2_smoothe' : fallback_ville_prixm2,
+    'ville_prix_median'    : fallback_ville_median,
+    'ville_prixm2_median'  : fallback_ville_med_m2,
+    'qrt_prix_smoothe'     : moyenne_globale,
+    'qrt_prixm2_smoothe'   : fallback_qrt_prixm2,
+    'qrt_prix_median'      : fallback_qrt_median,
+    'qrt_prixm2_median'    : fallback_qrt_med_m2,
+    'qrt_densite'          : fallback_qrt_densite,
+    'smoothing_factor'     : SMOOTHING_FACTOR,
+}
+
 artefacts = {
-    'modele_champion.joblib'    : meilleur_modele,
-    'scaler.joblib'             : scaler,
-    'encodeur_villes.joblib'    : moyennes_villes,
-    'encodeur_quartiers.joblib' : moyennes_quartiers,
-    'colonnes_entrainement.joblib': colonnes_finales,
-    'moyenne_globale.joblib'    : moyenne_globale,
+    # Modèle & preprocessing
+    'modele_champion.joblib'         : meilleur_modele,
+    'scaler.joblib'                  : scaler,
+    'colonnes_entrainement.joblib'   : colonnes_finales,
+
+    # Encodages villes
+    'enc_ville_prix_smoothe.joblib'  : enc_ville_prix,
+    'enc_ville_prixm2_smoothe.joblib': enc_ville_prixm2,
+    'enc_ville_prix_median.joblib'   : enc_ville_median,
+    'enc_ville_prixm2_median.joblib' : enc_ville_med_m2,
+
+    # Encodages quartiers
+    'enc_qrt_prix_smoothe.joblib'    : enc_qrt_prix,
+    'enc_qrt_prixm2_smoothe.joblib'  : enc_qrt_prixm2,
+    'enc_qrt_prix_median.joblib'     : enc_qrt_median,
+    'enc_qrt_prixm2_median.joblib'   : enc_qrt_med_m2,
+    'enc_qrt_densite.joblib'         : enc_qrt_densite,
+
+    # Fallbacks & config
+    'encoding_fallbacks.joblib'      : encoding_fallbacks,
+
+    # Rétrocompatibilité : l'ancien nom est conservé pour ne pas casser
+    # un éventuel code externe qui chargerait encore ces fichiers.
+    'encodeur_villes.joblib'         : enc_ville_prix,
+    'encodeur_quartiers.joblib'      : enc_qrt_prix,
+    'moyenne_globale.joblib'         : moyenne_globale,
 }
 
 for nom_fichier, objet in artefacts.items():
     chemin = MODELS_DIR / nom_fichier
     joblib.dump(objet, chemin)
     taille_ko = chemin.stat().st_size // 1024
-    print(f"  ✅ {nom_fichier:<35} ({taille_ko} Ko)")
+    print(f"  ✅ {nom_fichier:<40} ({taille_ko} Ko)")
 
 
 # ==============================================================================

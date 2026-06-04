@@ -15,24 +15,24 @@ RAPPORT OFFICIEL PFA — INTELLIGENCE ARTIFICIELLE IMMOBILIÈRE
    - Transformation target : log1p(Prix) → expm1(prédiction) pour rétablir les DH
    - Standardisation    : StandardScaler (μ=0, σ=1)
    - Valeurs manquantes : imputation par médiane par type de bien
-   - Features finales   : 11 colonnes
+   - Features finales   : 24 colonnes
 
 3. TEST STATISTIQUE
    - ANOVA Villes       : F-Stat = 11.86 | P-Value = 0.0000
    - Interprétation     : Différence significative entre villes (p<0.05)
 
 4. BENCHMARK DES ALGORITHMES ML
-  - RandomForest    | R²: 0.666 | MAE: 538,075 DH | Erreur médiane: 23.9% | <10%: 23%  <20%: 43%  <30%: 60%
-  - XGBoost         | R²: 0.674 | MAE: 520,645 DH | Erreur médiane: 22.5% | <10%: 24%  <20%: 46%  <30%: 62%
-  - LightGBM        | R²: 0.667 | MAE: 523,503 DH | Erreur médiane: 22.4% | <10%: 24%  <20%: 46%  <30%: 61%
+  - RandomForest    | R²: 0.684 | MAE: 518,785 DH | Erreur médiane: 22.9% | <10%: 24%  <20%: 45%  <30%: 62%
+  - XGBoost         | R²: 0.685 | MAE: 506,959 DH | Erreur médiane: 21.6% | <10%: 25%  <20%: 47%  <30%: 63%
+  - LightGBM        | R²: 0.671 | MAE: 513,768 DH | Erreur médiane: 22.0% | <10%: 26%  <20%: 47%  <30%: 63%
 
 5. MODÈLE RETENU POUR PRODUCTION
    - Algorithme         : XGBoost
-   - R² test set        : 0.674
-   - MAE                : 520,645 DH
-   - Amélioration vs données synthétiques : R² 0.459 → 0.674 (+47%)
+   - R² test set        : 0.685
+   - MAE                : 506,959 DH
+   - Amélioration vs données synthétiques : R² 0.459 → 0.685 (+49%)
 
 6. FICHIERS GÉNÉRÉS
-   - 6 artefacts .joblib pour l'API FastAPI
+   - 16 artefacts .joblib pour l'API FastAPI
    - 10 graphiques PNG dans le dossier 'D:\projet_pfa\reports\graphiques/'
    - Ce rapport : RAPPORT_PFA.txt
